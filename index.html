@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Objazdy ZG — utrudnienia drogowe w Zielonej Górze</title>
+<meta name="description" content="Aktualne remonty, objazdy i zmiany tras MZK w Zielonej Górze w jednym miejscu.">
+<meta name="theme-color" content="#2C2C2A">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.44.0/iconfont/tabler-icons.min.css">
+<style>
+  :root{
+    --surface-0:#F1EFE8;
+    --surface-1:#FFFFFF;
+    --surface-2:#FFFFFF;
+    --text-primary:#2C2C2A;
+    --text-secondary:#5F5E5A;
+    --text-muted:#888780;
+    --border:#E4E2D9;
+    --border-strong:#D3D1C7;
+    --accent-bg:#E6F1FB; --accent-text:#0C447C;
+    --warning-bg:#FAEEDA; --warning-text:#854F0B;
+    --danger-bg:#FCEBEB;  --danger-text:#A32D2D;
+    --header-bg:#2C2C2A;
+    --header-accent:#BA7517;
+    --premium-bg:#FAC775; --premium-text:#412402;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --surface-0:#1C1C1A; --surface-1:#2C2C2A; --surface-2:#2C2C2A;
+      --text-primary:#F1EFE8; --text-secondary:#B4B2A9; --text-muted:#888780;
+      --border:#444441; --border-strong:#5F5E5A;
+      --accent-bg:#1E3A52; --accent-text:#7FBFF5;
+    }
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--surface-0);color:var(--text-primary);-webkit-tap-highlight-color:transparent;}
+  .app{max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:24px;}
+  header{background:var(--header-bg);padding:max(20px,env(safe-area-inset-top)) 20px 16px;position:sticky;top:0;z-index:10;}
+  .header-row{display:flex;align-items:center;justify-content:space-between;}
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand-icon{width:34px;height:34px;border-radius:8px;background:var(--header-accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .brand-icon i{font-size:19px;color:#412402;}
+  .brand-title{margin:0;font-size:16px;font-weight:600;color:#fff;}
+  .brand-sub{margin:0;font-size:12px;color:#B4B2A9;}
+  #premiumBtn{background:var(--premium-bg);border:none;color:var(--premium-text);font-size:12px;font-weight:600;padding:8px 14px;border-radius:20px;cursor:pointer;}
+  #premiumBtn:active{transform:scale(0.97);}
+  .filters{display:flex;gap:8px;padding:14px 20px;background:var(--surface-1);overflow-x:auto;}
+  .chip{border:1px solid var(--border-strong);background:var(--surface-0);color:var(--text-secondary);font-size:13px;padding:6px 14px;border-radius:20px;cursor:pointer;white-space:nowrap;flex-shrink:0;font-weight:500;}
+  .chip.active{background:var(--header-bg);color:#fff;border-color:var(--header-bg);}
+  #list{background:var(--surface-1);padding:0 16px 16px;min-height:200px;}
+  .card{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-top:12px;display:flex;gap:10px;transition:opacity .15s;}
+  .card:active{opacity:0.75;}
+  .card-icon{width:32px;height:32px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+  .card-icon i{font-size:16px;}
+  .card-title{margin:0;font-size:14px;font-weight:600;}
+  .card-title-link{margin:0;font-size:14px;font-weight:600;color:var(--text-primary);text-decoration:underline;text-decoration-color:var(--border-strong);text-underline-offset:2px;}
+  .card-title-link:active{opacity:0.7;}
+  .card-date{font-size:11px;color:var(--text-muted);white-space:nowrap;flex-shrink:0;}
+  .card-desc{margin:4px 0 0;font-size:13px;color:var(--text-secondary);line-height:1.5;}
+  .card-more{display:inline-block;margin-top:6px;font-size:13px;font-weight:600;color:var(--accent-text);text-decoration:none;}
+  .card-more:active{opacity:0.7;}
+  .ad{background:var(--surface-2);border:1px dashed var(--border-strong);border-radius:12px;padding:14px 16px;margin-top:12px;text-align:center;}
+  .ad-label{margin:0;font-size:11px;color:var(--text-muted);}
+  .ad-body{margin:4px 0 0;font-size:13px;color:var(--text-secondary);}
+  #premiumNote{text-align:center;font-size:12px;color:var(--text-muted);margin:14px 20px 0;}
+  .empty{text-align:center;font-size:13px;color:var(--text-muted);padding:32px 0;}
+  .skeleton{height:64px;border-radius:12px;background:linear-gradient(90deg,var(--surface-0) 25%,var(--border) 50%,var(--surface-0) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;margin-top:12px;}
+  @keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="header-row">
+      <div class="brand">
+        <div class="brand-icon"><i class="ti ti-road" aria-hidden="true"></i></div>
+        <div>
+          <p class="brand-title">Objazdy ZG</p>
+          <p class="brand-sub">Zielona Góra &middot; na żywo</p>
+        </div>
+      </div>
+      <button id="premiumBtn"><i class="ti ti-star" aria-hidden="true"></i> Premium</button>
+    </div>
+  </header>
+
+  <div class="filters" id="filters">
+    <button class="chip active" data-filter="all">Wszystkie</button>
+    <button class="chip" data-filter="drogi">Drogi</button>
+    <button class="chip" data-filter="mzk">MZK</button>
+    <button class="chip" data-filter="wodociagi">Wodociągi</button>
+  </div>
+
+  <div id="list"></div>
+  <p id="premiumNote"></p>
+</div>
+
+<script>
+// Podmień na adres własnego backendu po wdrożeniu (patrz README).
+const API_BASE_URL = window.location.hostname === 'localhost'
+  ? 'http://localhost:3000'
+  : 'https://objazdy-zg-backend.onrender.com';
+
+const CATEGORY_STYLE = {
+  drogi:     {bg:'var(--warning-bg)', text:'var(--warning-text)', icon:'ti-road-sign'},
+  mzk:       {bg:'var(--accent-bg)',  text:'var(--accent-text)',  icon:'ti-bus'},
+  wodociagi: {bg:'var(--danger-bg)',  text:'var(--danger-text)',  icon:'ti-droplet'},
+};
+
+const FALLBACK_DATA = [
+  {id:'fallback-1',category:'drogi',street:'Sprawdź stronę Urzędu Miasta',published_at:new Date().toISOString(),description:'Nie udało się pobrać najnowszych danych. Połącz się z internetem i odśwież.'},
+];
+
+let filter = 'all';
+let premium = false;
+let currentItems = [];
+
+const list = document.getElementById('list');
+const note = document.getElementById('premiumNote');
+const premiumBtn = document.getElementById('premiumBtn');
+
+function showSkeleton(){
+  list.innerHTML = '<div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>';
+}
+
+async function loadData(){
+  showSkeleton();
+  try{
+    const params = new URLSearchParams();
+    if(filter !== 'all') params.set('category', filter);
+    const res = await fetch(`${API_BASE_URL}/api/utrudnienia?${params}`);
+    if(!res.ok) throw new Error('bad response');
+    const json = await res.json();
+    currentItems = json.items.map(i => ({
+      id: i.id,
+      category: i.category,
+      street: i.street || i.title,
+      source_url: i.source_url,
+      published_at: i.published_at,
+      description: i.description,
+    }));
+  }catch(err){
+    console.warn('Nie udalo sie pobrac danych z API, pokazuje dane zapasowe.', err);
+    currentItems = FALLBACK_DATA.filter(d => filter === 'all' || d.category === filter);
+  }
+  render();
+}
+
+function formatDate(iso){
+  try{ return new Date(iso).toLocaleDateString('pl-PL',{day:'numeric',month:'long'}); }
+  catch(e){ return ''; }
+}
+
+function render(){
+  const items = currentItems;
+  list.innerHTML = '';
+
+  if(items.length === 0){
+    const empty = document.createElement('p');
+    empty.className = 'empty';
+    empty.textContent = 'Brak zgłoszonych utrudnień w tej kategorii.';
+    list.appendChild(empty);
+  }
+
+  items.forEach((d, i) => {
+    const style = CATEGORY_STYLE[d.category] || CATEGORY_STYLE.drogi;
+    const card = document.createElement('div');
+    card.className = 'card';
+    const titleHtml = d.source_url
+      ? `<a class="card-title-link" href="${d.source_url}" target="_blank" rel="noopener">${d.street || 'Zielona Góra'}</a>`
+      : `<p class="card-title">${d.street || 'Zielona Góra'}</p>`;
+    card.innerHTML = `
+      <div class="card-icon" style="background:${style.bg};">
+        <i class="ti ${style.icon}" style="color:${style.text};" aria-hidden="true"></i>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+          ${titleHtml}
+          <span class="card-date">${formatDate(d.published_at)}</span>
+        </div>
+        <p class="card-desc">${d.description || ''}</p>
+      </div>`;
+    list.appendChild(card);
+
+    if(!premium && (i + 1) % 2 === 0 && i !== items.length - 1){
+      const ad = document.createElement('div');
+      ad.className = 'ad';
+      ad.innerHTML = `<p class="ad-label">Reklama</p><p class="ad-body">Miejsce na reklamę lokalnej firmy</p>`;
+      list.appendChild(ad);
+    }
+  });
+
+  note.textContent = premium
+    ? 'Premium aktywne: bez reklam i z powiadomieniami push o nowych utrudnieniach.'
+    : 'Wersja darmowa z reklamami. Premium (4,99 zł jednorazowo) usuwa reklamy i włącza powiadomienia.';
+}
+
+document.querySelectorAll('.chip').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.chip').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    filter = btn.dataset.filter;
+    loadData();
+  });
+});
+
+premiumBtn.addEventListener('click', () => {
+  // TODO: podpiąć prawdziwą płatność (np. Google Play Billing w wersji Android,
+  // albo Stripe/BLIK w wersji webowej) zamiast lokalnego przełącznika.
+  premium = !premium;
+  premiumBtn.innerHTML = premium
+    ? '<i class="ti ti-check" aria-hidden="true"></i> Premium aktywne'
+    : '<i class="ti ti-star" aria-hidden="true"></i> Premium';
+  render();
+});
+
+// Service Worker zostal calkowicie wylaczony (powodowal serwowanie
+// zbuforowanych, nieaktualnych wersji strony). Ten kod aktywnie usuwa
+// wszelkie wczesniej zarejestrowane Service Workery i ich cache u kazdego,
+// kto wczesniej odwiedzil strone, zeby appka zawsze ladowala sie na swiezo.
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    regs.forEach(reg => reg.unregister());
+  });
+}
+if('caches' in window){
+  caches.keys().then(keys => keys.forEach(key => caches.delete(key)));
+}
+
+loadData();
+</script>
+</body>
+</html>
