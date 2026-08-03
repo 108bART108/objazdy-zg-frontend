@@ -61,6 +61,9 @@
   .card-title-link:active{opacity:0.7;}
   .card-date{font-size:11px;color:var(--text-muted);white-space:nowrap;flex-shrink:0;}
   .card-desc{margin:4px 0 0;font-size:13px;color:var(--text-secondary);line-height:1.5;}
+  .card-desc.clamped{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+  .card-toggle{display:inline-block;margin-top:4px;font-size:12.5px;font-weight:600;color:var(--accent-text);cursor:pointer;user-select:none;}
+  .card-toggle:active{opacity:0.7;}
   .card-more{display:inline-block;margin-top:6px;font-size:13px;font-weight:600;color:var(--accent-text);text-decoration:none;}
   .card-more:active{opacity:0.7;}
   .ad{background:var(--surface-2);border:1px dashed var(--border-strong);border-radius:12px;padding:14px 16px;margin-top:12px;text-align:center;}
@@ -179,6 +182,8 @@ function render(){
     const titleHtml = d.source_url
       ? `<a class="card-title-link" href="${d.source_url}" target="_blank" rel="noopener">${d.street || 'Zielona Góra'}</a>`
       : `<p class="card-title">${d.street || 'Zielona Góra'}</p>`;
+    const desc = d.description || '';
+    const isLong = desc.length > 140;
     card.innerHTML = `
       <div class="card-icon" style="background:${style.bg};">
         <i class="ti ${style.icon}" style="color:${style.text};" aria-hidden="true"></i>
@@ -188,9 +193,19 @@ function render(){
           ${titleHtml}
           <span class="card-date">${formatDate(d.published_at)}</span>
         </div>
-        <p class="card-desc">${d.description || ''}</p>
+        <p class="card-desc${isLong ? ' clamped' : ''}">${desc}</p>
+        ${isLong ? '<span class="card-toggle">Pokaż więcej ▾</span>' : ''}
       </div>`;
     list.appendChild(card);
+
+    if(isLong){
+      const toggle = card.querySelector('.card-toggle');
+      const descEl = card.querySelector('.card-desc');
+      toggle.addEventListener('click', () => {
+        const stillClamped = descEl.classList.toggle('clamped');
+        toggle.textContent = stillClamped ? 'Pokaż więcej ▾' : 'Zwiń ▴';
+      });
+    }
 
     if((i + 1) % 2 === 0 && i !== items.length - 1){
       const ad = document.createElement('div');
