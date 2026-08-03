@@ -48,6 +48,7 @@
   .brand-title{margin:0;font-size:16px;font-weight:600;color:#fff;}
   .brand-sub{margin:0;font-size:12px;color:#B4B2A9;}
   .filters{display:flex;gap:8px;padding:14px 20px;background:var(--surface-1);overflow-x:auto;}
+  .category-desc{margin:0;padding:0 20px 14px;font-size:12.5px;line-height:1.4;color:var(--text-muted);background:var(--surface-1);}
   .chip{border:1px solid var(--border-strong);background:var(--surface-0);color:var(--text-secondary);font-size:13px;padding:6px 14px;border-radius:20px;cursor:pointer;white-space:nowrap;flex-shrink:0;font-weight:500;}
   .chip.active{background:var(--header-bg);color:#fff;border-color:var(--header-bg);}
   #list{background:var(--surface-1);padding:0 16px 16px;min-height:200px;}
@@ -91,6 +92,7 @@
     <button class="chip" data-filter="wodociagi">Wodociągi</button>
     <button class="chip" data-filter="prad">Prąd</button>
   </div>
+  <p id="categoryDesc" class="category-desc"></p>
 
   <div id="list"></div>
 </div>
@@ -108,6 +110,14 @@ const CATEGORY_STYLE = {
   prad:      {bg:'var(--prad-bg)',    text:'var(--prad-text)',    icon:'ti-bolt'},
 };
 
+const CATEGORY_DESC = {
+  all:       'Wszystkie zgłoszone utrudnienia w Zielonej Górze w jednym miejscu: drogi, komunikacja miejska, wodociągi i prąd.',
+  drogi:     'Remonty, objazdy, zamknięcia ulic i zmiany w organizacji ruchu drogowego w Zielonej Górze (ZDW, Urząd Miasta).',
+  mzk:       'Zmiany tras, objazdy linii i inne komunikaty Miejskiego Zakładu Komunikacji w Zielonej Górze.',
+  wodociagi: 'Planowane i awaryjne przerwy w dostawie wody oraz prace na sieci wodociągowo-kanalizacyjnej.',
+  prad:      'Planowane wyłączenia prądu w Zielonej Górze i okolicy (Enea Operator).',
+};
+
 const FALLBACK_DATA = [
   {id:'fallback-1',category:'drogi',street:'Sprawdź stronę Urzędu Miasta',published_at:new Date().toISOString(),description:'Nie udało się pobrać najnowszych danych. Połącz się z internetem i odśwież.'},
 ];
@@ -116,6 +126,7 @@ let filter = 'all';
 let currentItems = [];
 
 const list = document.getElementById('list');
+const categoryDesc = document.getElementById('categoryDesc');
 
 function showSkeleton(){
   list.innerHTML = '<div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>';
@@ -152,6 +163,7 @@ function formatDate(iso){
 function render(){
   const items = currentItems;
   list.innerHTML = '';
+  categoryDesc.textContent = CATEGORY_DESC[filter] || CATEGORY_DESC.all;
 
   if(items.length === 0){
     const empty = document.createElement('p');
