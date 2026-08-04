@@ -24,6 +24,7 @@
     --warning-bg:#FAEEDA; --warning-text:#854F0B;
     --danger-bg:#FCEBEB;  --danger-text:#A32D2D;
     --prad-bg:#FDF4DC;    --prad-text:#8A5A00;
+    --fact-bg:#EFE6FB;    --fact-text:#5B3A9E;
     --header-bg:#2C2C2A;
     --header-accent:#1B5E20;
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
@@ -35,6 +36,7 @@
       --border:#444441; --border-strong:#5F5E5A;
       --accent-bg:#1E3A52; --accent-text:#7FBFF5;
       --prad-bg:#4A3A0F; --prad-text:#F5CB5C;
+      --fact-bg:#3B2A5C; --fact-text:#C4A6F5;
     }
   }
   *{box-sizing:border-box;}
@@ -89,11 +91,11 @@
   </header>
 
   <div class="filters" id="filters">
-    <button class="chip active" data-filter="all">Wszystkie</button>
-    <button class="chip" data-filter="drogi">Drogi</button>
+    <button class="chip active" data-filter="drogi">Drogi</button>
     <button class="chip" data-filter="mzk">MZK</button>
     <button class="chip" data-filter="wodociagi">Wodociągi</button>
     <button class="chip" data-filter="prad">Prąd</button>
+    <button class="chip" data-filter="ciekawostka">Ciekawostka</button>
   </div>
   <p id="categoryDesc" class="category-desc"></p>
 
@@ -107,25 +109,69 @@ const API_BASE_URL = window.location.hostname === 'localhost'
   : 'https://objazdy-zg-backend1.onrender.com';
 
 const CATEGORY_STYLE = {
-  drogi:     {bg:'var(--warning-bg)', text:'var(--warning-text)', icon:'ti-road-sign'},
-  mzk:       {bg:'var(--accent-bg)',  text:'var(--accent-text)',  icon:'ti-bus'},
-  wodociagi: {bg:'var(--danger-bg)',  text:'var(--danger-text)',  icon:'ti-droplet'},
-  prad:      {bg:'var(--prad-bg)',    text:'var(--prad-text)',    icon:'ti-bolt'},
+  drogi:       {bg:'var(--warning-bg)', text:'var(--warning-text)', icon:'ti-road-sign'},
+  mzk:         {bg:'var(--accent-bg)',  text:'var(--accent-text)',  icon:'ti-bus'},
+  wodociagi:   {bg:'var(--danger-bg)',  text:'var(--danger-text)',  icon:'ti-droplet'},
+  prad:        {bg:'var(--prad-bg)',    text:'var(--prad-text)',    icon:'ti-bolt'},
+  ciekawostka: {bg:'var(--fact-bg)',    text:'var(--fact-text)',    icon:'ti-bulb'},
 };
 
 const CATEGORY_DESC = {
-  all:       'Wszystkie zgłoszone utrudnienia w Zielonej Górze w jednym miejscu: drogi, komunikacja miejska, wodociągi i prąd.',
-  drogi:     'Remonty, objazdy, zamknięcia ulic i zmiany w organizacji ruchu drogowego w Zielonej Górze (ZDW, Urząd Miasta).',
-  mzk:       'Zmiany tras, objazdy linii i inne komunikaty Miejskiego Zakładu Komunikacji w Zielonej Górze.',
-  wodociagi: 'Planowane i awaryjne przerwy w dostawie wody oraz prace na sieci wodociągowo-kanalizacyjnej.',
-  prad:      'Planowane wyłączenia prądu w Zielonej Górze i okolicy (Enea Operator).',
+  drogi:       'Remonty, objazdy, zamknięcia ulic i zmiany w organizacji ruchu drogowego w Zielonej Górze (ZDW, Urząd Miasta).',
+  mzk:         'Zmiany tras, objazdy linii i inne komunikaty Miejskiego Zakładu Komunikacji w Zielonej Górze.',
+  wodociagi:   'Planowane i awaryjne przerwy w dostawie wody oraz prace na sieci wodociągowo-kanalizacyjnej.',
+  prad:        'Planowane wyłączenia prądu w Zielonej Górze i okolicy (Enea Operator).',
+  ciekawostka: 'Jedna nowa ciekawostka dziennie o historii, tradycji i przyrodzie Zielonej Góry i okolic.',
 };
 
 const FALLBACK_DATA = [
   {id:'fallback-1',category:'drogi',street:'Sprawdź stronę Urzędu Miasta',published_at:new Date().toISOString(),description:'Nie udało się pobrać najnowszych danych. Połącz się z internetem i odśwież.'},
 ];
 
-let filter = 'all';
+// Sprawdzone ciekawostki o Zielonej Gorze i okolicach (historia, tradycja
+// winiarska, przyroda, ludzie). Jedna dziennie, wybierana rotacyjnie wg dnia
+// roku - bez zaleznosci od zewnetrznych, kruchych zrodel do scrapowania.
+const CIEKAWOSTKI = [
+  'Zielona Góra po raz pierwszy pojawia się w źródłach historycznych w 1222 roku, choć pierwsze osady rolnicze na tym terenie powstały już w X wieku.',
+  'Miasto bywa nazywane „Winnym Grodem" lub „Grodem Bachusa" – winorośl uprawiano tu już w średniowieczu, a pierwsza udokumentowana wzmianka o winnicach pochodzi z 1314 roku.',
+  'Według lokalnej legendy tradycja winiarska Zielonej Góry zaczęła się od kropli krwi boga Bachusa, którą bogini Atena rozsiała po najlepszych terenach winiarskich świata.',
+  'Krzewy winorośli sprowadzili na te tereny osadnicy z Flandrii, którzy przybyli tu około 1150 roku.',
+  'Pod koniec XVIII wieku w Zielonej Górze działało 48 mistrzów winiarskich, a uprawy winorośli zajmowały około 700 hektarów.',
+  'Winobranie obchodzone jest w Zielonej Górze od ponad 150 lat – od 1852 roku patronat nad świętem sprawuje oficjalnie Rada Miejska.',
+  'Pierwsze powojenne Winobranie odbyło się już we wrześniu 1945 roku, zaledwie kilka miesięcy po przejęciu miasta przez polską administrację.',
+  'Latem 1945 roku, gdy Polacy przejmowali Zieloną Górę, miasto liczyło zaledwie około sześciu tysięcy mieszkańców, a wokół niego rosło 28 hektarów winnic.',
+  'Na przełomie XIX i XX wieku, gdy sprzedaż wina zaczęła słabnąć, część zielonogórskich producentów przestawiła się na wyrób koniaków.',
+  'Zielonogórski „szampan" produkowano początkowo wcale nie z winogron, lecz z jabłek, według receptury opracowanej w Jeleniej Górze.',
+  'Konkatedra świętej Jadwigi Śląskiej, zbudowana w XIII wieku, jest najstarszym zachowanym zabytkiem Zielonej Góry.',
+  'Zielonogórski ratusz wzniesiono w XV wieku w stylu gotyckim, a swój obecny, klasycystyczny wygląd zawdzięcza przebudowom z XIX stulecia.',
+  'Przy placu Pocztowym stoi Wieża Głodowa, zwana też Łazienną – jeden z najstarszych elementów miejskich fortyfikacji, pochodzący z XV wieku.',
+  'Ponieważ Zielona Góra została mocno zniszczona podczas II wojny światowej, w mieście zachowało się stosunkowo niewiele przedwojennych zabytków.',
+  'Niemal połowa powierzchni Zielonej Góry to tereny zielone – parki, lasy i skwery.',
+  'W zielonogórskiej Palmiarni, pod szklanym dachem, rośnie ponad 200 gatunków roślin tropikalnych i subtropikalnych.',
+  'Zielona Góra bywa nazywana „miastem srok" – żyje tu ponad 700 par tych ptaków, co czyni ją prawdopodobnie miastem o jednym z najwyższych zagęszczeń populacji srok na świecie.',
+  'Z Zielonej Góry pochodzi piosenkarka Maryla Rodowicz, jedna z najbardziej rozpoznawalnych artystek polskiej sceny muzycznej.',
+  'Dziennikarz Tomasz Lis, znany z polskiej telewizji, urodził się właśnie w Zielonej Górze.',
+  'W 2003 roku Zielona Góra, Sulechów i Nowa Sól postanowiły współpracować jako tzw. Lubuskie Trójmiasto – porozumienie podpisano rok później.',
+  'Powierzchnia Zielonej Góry wynosi 278,32 km² – pod tym względem miasto zajmuje szóste miejsce w Polsce, ustępując tylko Warszawie, Krakowowi, Szczecinowi, Łodzi i Wrocławiowi.',
+  'Choć Zielona Góra jest szóstym co do wielkości powierzchni miastem w Polsce, pod względem liczby mieszkańców plasuje się dopiero w trzeciej dziesiątce.',
+  'Od 1999 roku Zielona Góra jest, obok Gorzowa Wielkopolskiego, jedną z dwóch stolic województwa lubuskiego.',
+  'Uniwersytet Zielonogórski działa od 2001 roku i jest jednym z ważniejszych ośrodków akademickich w zachodniej Polsce.',
+  'Liczba mieszkańców Zielonej Góry przekroczyła 100 tysięcy w latach 80. XX wieku.',
+  'W 1871 roku przez Zieloną Górę poprowadzono linię kolejową łączącą Wrocław ze Szczecinem, co znacząco przyspieszyło rozwój miasta jako ośrodka przemysłowego.',
+  'Park Książęcy w Zatoniu pod Zieloną Górą został wyróżniony w plebiscycie National Geographic Traveler „Cuda Polski 2023".',
+  'Historyczny hymn zielonogórskiego Winobrania – „Walc winobraniowy" – nagrano po raz pierwszy w 1961 roku.',
+  'W czasie Winobrania mieszkańcy symbolicznie przekazują Bachusowi, bogu wina, klucze do miasta na czas trwania święta.',
+  'W XIX wieku Zielona Góra była ważnym ośrodkiem sukiennictwa – produkcji i handlu tkaninami – co przyczyniło się do jej rozwoju gospodarczego.',
+];
+
+function factOfTheDay(){
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 0);
+  const dayOfYear = Math.floor((now - start) / 86400000);
+  return CIEKAWOSTKI[dayOfYear % CIEKAWOSTKI.length];
+}
+
+let filter = 'drogi';
 let currentItems = [];
 
 const list = document.getElementById('list');
@@ -136,10 +182,14 @@ function showSkeleton(){
 }
 
 async function loadData(){
+  if(filter === 'ciekawostka'){
+    renderCiekawostka();
+    return;
+  }
   showSkeleton();
   try{
     const params = new URLSearchParams();
-    if(filter !== 'all') params.set('category', filter);
+    params.set('category', filter);
     const res = await fetch(`${API_BASE_URL}/api/utrudnienia?${params}`);
     if(!res.ok) throw new Error('bad response');
     const json = await res.json();
@@ -153,9 +203,28 @@ async function loadData(){
     }));
   }catch(err){
     console.warn('Nie udalo sie pobrac danych z API, pokazuje dane zapasowe.', err);
-    currentItems = FALLBACK_DATA.filter(d => filter === 'all' || d.category === filter);
+    currentItems = FALLBACK_DATA.filter(d => d.category === filter);
   }
   render();
+}
+
+function renderCiekawostka(){
+  categoryDesc.textContent = CATEGORY_DESC.ciekawostka;
+  const style = CATEGORY_STYLE.ciekawostka;
+  const today = new Date().toLocaleDateString('pl-PL', {day:'numeric', month:'long', year:'numeric'});
+  list.innerHTML = `
+    <div class="card">
+      <div class="card-icon" style="background:${style.bg};">
+        <i class="ti ${style.icon}" style="color:${style.text};" aria-hidden="true"></i>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+          <p class="card-title">Ciekawostka dnia</p>
+          <span class="card-date">${today}</span>
+        </div>
+        <p class="card-desc">${factOfTheDay()}</p>
+      </div>
+    </div>`;
 }
 
 function formatDate(iso){
