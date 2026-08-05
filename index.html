@@ -44,6 +44,21 @@
   .app{max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:24px;}
   header{background:var(--header-bg);padding:max(20px,env(safe-area-inset-top)) 20px 16px;position:sticky;top:0;z-index:10;}
   .header-row{display:flex;align-items:center;justify-content:space-between;}
+  .notify-btn{background:rgba(255,255,255,0.12);border:none;color:#fff;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;flex-shrink:0;}
+  .notify-btn:active{transform:scale(0.94);}
+  .notify-btn.active{background:var(--prad-bg);color:var(--prad-text);}
+  .notify-panel{background:var(--surface-1);border-bottom:1px solid var(--border);padding:16px 20px;}
+  .notify-panel.hidden{display:none;}
+  .notify-panel-title{margin:0 0 10px;font-size:14px;font-weight:700;color:var(--text-primary);}
+  .notify-row{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13.5px;color:var(--text-primary);cursor:pointer;}
+  .notify-row input{width:17px;height:17px;flex-shrink:0;}
+  .notify-row-master{font-weight:600;border-bottom:1px solid var(--border);margin-bottom:6px;padding-bottom:10px;}
+  .notify-categories{padding-left:4px;}
+  .notify-categories.disabled{opacity:0.4;pointer-events:none;}
+  .notify-status{margin:8px 0 0;font-size:12.5px;color:var(--text-muted);min-height:16px;}
+  .notify-actions{display:flex;gap:8px;margin-top:12px;}
+  .notify-save{flex:1;background:var(--header-accent);color:#fff;border:none;border-radius:10px;padding:10px;font-weight:600;font-size:13.5px;cursor:pointer;}
+  .notify-cancel{background:transparent;color:var(--text-secondary);border:1px solid var(--border-strong);border-radius:10px;padding:10px 16px;font-weight:600;font-size:13.5px;cursor:pointer;}
   .brand{display:flex;align-items:center;gap:10px;}
   .brand-icon{width:34px;height:34px;border-radius:8px;background:var(--header-accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
   .brand-icon i{font-size:19px;color:#412402;}
@@ -87,8 +102,42 @@
           <p class="brand-sub">Zielona Góra &middot; na żywo</p>
         </div>
       </div>
+      <button id="notifyBtn" class="notify-btn" aria-label="Ustawienia powiadomień">
+        <i class="ti ti-bell" aria-hidden="true"></i>
+      </button>
     </div>
   </header>
+
+  <div id="notifyPanel" class="notify-panel hidden">
+    <p class="notify-panel-title">Powiadomienia</p>
+    <label class="notify-row notify-row-master">
+      <input type="checkbox" id="notifyMaster">
+      <span>Chcę otrzymywać powiadomienia</span>
+    </label>
+    <div id="notifyCategories" class="notify-categories">
+      <label class="notify-row">
+        <input type="checkbox" class="notify-cat" value="drogi" checked>
+        <span>Drogi</span>
+      </label>
+      <label class="notify-row">
+        <input type="checkbox" class="notify-cat" value="mzk" checked>
+        <span>MZK</span>
+      </label>
+      <label class="notify-row">
+        <input type="checkbox" class="notify-cat" value="wodociagi" checked>
+        <span>Wodociągi</span>
+      </label>
+      <label class="notify-row">
+        <input type="checkbox" class="notify-cat" value="prad" checked>
+        <span>Prąd</span>
+      </label>
+    </div>
+    <p id="notifyStatus" class="notify-status"></p>
+    <div class="notify-actions">
+      <button id="notifySave" class="notify-save">Zapisz</button>
+      <button id="notifyClose" class="notify-cancel">Zamknij</button>
+    </div>
+  </div>
 
   <div class="filters" id="filters">
     <button class="chip active" data-filter="drogi">Drogi</button>
@@ -183,7 +232,7 @@ function showSkeleton(){
 
 async function loadData(){
   if(filter === 'ciekawostka'){
-    renderCiekawostka();
+    await renderCiekawostka();
     return;
   }
   showSkeleton();
@@ -208,10 +257,22 @@ async function loadData(){
   render();
 }
 
-function renderCiekawostka(){
+async function renderCiekawostka(){
   categoryDesc.textContent = CATEGORY_DESC.ciekawostka;
   const style = CATEGORY_STYLE.ciekawostka;
   const today = new Date().toLocaleDateString('pl-PL', {day:'numeric', month:'long', year:'numeric'});
+  showSkeleton();
+
+  let content = factOfTheDay();
+  try{
+    const res = await fetch(`${API_BASE_URL}/api/ciekawostka`);
+    if(!res.ok) throw new Error('bad response');
+    const json = await res.json();
+    if(json.content) content = json.content;
+  }catch(err){
+    console.warn('Nie udalo sie pobrac ciekawostki z API, pokazuje lokalna.', err);
+  }
+
   list.innerHTML = `
     <div class="card">
       <div class="card-icon" style="background:${style.bg};">
@@ -222,7 +283,7 @@ function renderCiekawostka(){
           <p class="card-title">Ciekawostka dnia</p>
           <span class="card-date">${today}</span>
         </div>
-        <p class="card-desc">${factOfTheDay()}</p>
+        <p class="card-desc">${content}</p>
       </div>
     </div>`;
 }
@@ -294,18 +355,138 @@ document.querySelectorAll('.chip').forEach(btn => {
   });
 });
 
-// Service Worker zostal calkowicie wylaczony (powodowal serwowanie
-// zbuforowanych, nieaktualnych wersji strony). Ten kod aktywnie usuwa
-// wszelkie wczesniej zarejestrowane Service Workery i ich cache u kazdego,
-// kto wczesniej odwiedzil strone, zeby appka zawsze ladowala sie na swiezo.
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.getRegistrations().then(regs => {
-    regs.forEach(reg => reg.unregister());
-  });
-}
+// Jednorazowo czyscimy pozostalosci po starym, zepsutym Service Workerze
+// (jesli u kogos jeszcze siedzi z wczesniejszej wersji appki), po czym
+// rejestrujemy nowy, minimalny SW - sluzacy WYLACZNIE do powiadomien push,
+// bez zadnego cache'owania stron.
 if('caches' in window){
   caches.keys().then(keys => keys.forEach(key => caches.delete(key)));
 }
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(err => console.warn('SW blad:', err));
+}
+
+// --- Powiadomienia push ---
+
+function urlBase64ToUint8Array(base64String){
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+}
+
+const notifyBtn = document.getElementById('notifyBtn');
+const notifyPanel = document.getElementById('notifyPanel');
+const notifyMaster = document.getElementById('notifyMaster');
+const notifyCategoriesEl = document.getElementById('notifyCategories');
+const notifyStatus = document.getElementById('notifyStatus');
+const notifySave = document.getElementById('notifySave');
+const notifyClose = document.getElementById('notifyClose');
+
+function loadNotifyPrefs(){
+  try{
+    const raw = localStorage.getItem('notifyPrefs');
+    if(!raw) return null;
+    return JSON.parse(raw);
+  }catch(e){ return null; }
+}
+
+function saveNotifyPrefsLocal(prefs){
+  localStorage.setItem('notifyPrefs', JSON.stringify(prefs));
+}
+
+function applyPrefsToUI(prefs){
+  const enabled = !!(prefs && prefs.enabled);
+  notifyMaster.checked = enabled;
+  notifyCategoriesEl.classList.toggle('disabled', !enabled);
+  const cats = (prefs && prefs.categories) || [];
+  document.querySelectorAll('.notify-cat').forEach(cb => {
+    cb.checked = cats.length === 0 ? true : cats.includes(cb.value);
+  });
+  notifyBtn.classList.toggle('active', enabled);
+}
+
+applyPrefsToUI(loadNotifyPrefs());
+
+notifyBtn.addEventListener('click', () => {
+  notifyPanel.classList.toggle('hidden');
+});
+notifyClose.addEventListener('click', () => {
+  notifyPanel.classList.add('hidden');
+});
+
+notifyMaster.addEventListener('change', () => {
+  notifyCategoriesEl.classList.toggle('disabled', !notifyMaster.checked);
+});
+
+notifySave.addEventListener('click', async () => {
+  const enabled = notifyMaster.checked;
+  const allCats = [...document.querySelectorAll('.notify-cat')];
+  const checkedCats = allCats.filter(cb => cb.checked).map(cb => cb.value);
+  // Jesli zaznaczone sa wszystkie kategorie, zapisujemy pusta liste
+  // (backend traktuje to jako "wszystkie", co jest odporne na dodanie
+  // nowej kategorii w przyszlosci).
+  const categories = checkedCats.length === allCats.length ? [] : checkedCats;
+
+  if(!enabled){
+    saveNotifyPrefsLocal({ enabled: false, categories });
+    applyPrefsToUI({ enabled: false, categories });
+    try{
+      const reg = await navigator.serviceWorker.getRegistration();
+      const sub = reg && await reg.pushManager.getSubscription();
+      if(sub){
+        await fetch(`${API_BASE_URL}/api/push/unsubscribe`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ endpoint: sub.endpoint }),
+        });
+        await sub.unsubscribe();
+      }
+    }catch(e){ console.warn('Blad przy wypisywaniu z powiadomien:', e); }
+    notifyStatus.textContent = 'Powiadomienia wyłączone.';
+    return;
+  }
+
+  if(!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)){
+    notifyStatus.textContent = 'Ta przeglądarka nie obsługuje powiadomień push.';
+    return;
+  }
+
+  notifyStatus.textContent = 'Włączam powiadomienia…';
+  try{
+    const permission = await Notification.requestPermission();
+    if(permission !== 'granted'){
+      notifyStatus.textContent = 'Musisz zezwolić na powiadomienia w przeglądarce.';
+      return;
+    }
+
+    const keyRes = await fetch(`${API_BASE_URL}/api/push/vapid-public-key`);
+    if(!keyRes.ok) throw new Error('Serwer nie ma jeszcze skonfigurowanych powiadomień');
+    const { publicKey } = await keyRes.json();
+
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if(!sub){
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      });
+    }
+
+    await fetch(`${API_BASE_URL}/api/push/subscribe`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ endpoint: sub.endpoint, subscription: sub.toJSON(), categories }),
+    });
+
+    saveNotifyPrefsLocal({ enabled: true, categories });
+    applyPrefsToUI({ enabled: true, categories });
+    notifyStatus.textContent = 'Gotowe! Będziesz dostawać powiadomienia.';
+  }catch(err){
+    console.error('Blad wlaczania powiadomien:', err);
+    notifyStatus.textContent = 'Coś poszło nie tak. Spróbuj ponownie.';
+  }
+});
 
 loadData();
 </script>
