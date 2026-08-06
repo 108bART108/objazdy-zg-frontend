@@ -230,6 +230,21 @@ function showSkeleton(){
   list.innerHTML = '<div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>';
 }
 
+// Darmowy plan Render usypia backend po okresie bezczynnosci - obudzenie
+// moze potrwac nawet 50 sekund. Bez limitu czasu appka czekalaby w
+// nieskonczonosc (uzytkownik widzialby wieczny "szkielet" ladowania).
+// Ten helper przerywa zapytanie po okreslonym czasie, zeby appka mogla
+// pokazac dane zapasowe zamiast wisiec.
+async function fetchWithTimeout(url, timeoutMs = 20000){
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try{
+    return await fetch(url, { signal: controller.signal });
+  }finally{
+    clearTimeout(timer);
+  }
+}
+
 async function loadData(){
   if(filter === 'ciekawostka'){
     await renderCiekawostka();
@@ -239,7 +254,7 @@ async function loadData(){
   try{
     const params = new URLSearchParams();
     params.set('category', filter);
-    const res = await fetch(`${API_BASE_URL}/api/utrudnienia?${params}`);
+    const res = await fetchWithTimeout(`${API_BASE_URL}/api/utrudnienia?${params}`);
     if(!res.ok) throw new Error('bad response');
     const json = await res.json();
     currentItems = json.items.map(i => ({
@@ -265,7 +280,7 @@ async function renderCiekawostka(){
 
   let content = factOfTheDay();
   try{
-    const res = await fetch(`${API_BASE_URL}/api/ciekawostka`);
+    const res = await fetchWithTimeout(`${API_BASE_URL}/api/ciekawostka`);
     if(!res.ok) throw new Error('bad response');
     const json = await res.json();
     if(json.content) content = json.content;
