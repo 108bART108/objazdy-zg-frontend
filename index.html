@@ -283,7 +283,7 @@ async function renderCiekawostka(){
           <p class="card-title">Ciekawostka dnia</p>
           <span class="card-date">${today}</span>
         </div>
-        <p class="card-desc">${content}</p>
+        <p class="card-desc">${escapeHtml(content)}</p>
       </div>
     </div>`;
 }
@@ -291,6 +291,24 @@ async function renderCiekawostka(){
 function formatDate(iso){
   try{ return new Date(iso).toLocaleDateString('pl-PL',{day:'numeric',month:'long'}); }
   catch(e){ return ''; }
+}
+
+// Zescrapowana tresc z zewnetrznych stron moze zawierac znaki specjalne
+// HTML (<, >, &, cudzyslowy), ktore wstawione bezposrednio potrafia
+// zepsuc strukture karty (np. "zjesc" kolejne elementy jak date czy
+// przycisk "Pokaz wiecej"). Ta funkcja zamienia je na bezpieczne encje
+// przed wstawieniem do innerHTML.
+function escapeHtml(text){
+  const div = document.createElement('div');
+  div.textContent = text == null ? '' : String(text);
+  return div.innerHTML;
+}
+
+// Jak escapeHtml, ale dodatkowo zabezpiecza cudzyslowy - potrzebne przy
+// wstawianiu wartosci do atrybutow HTML (np. href="...") a nie tylko
+// do zwyklej tresci tekstowej.
+function escapeAttr(text){
+  return escapeHtml(text).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 function render(){
@@ -310,10 +328,11 @@ function render(){
     const card = document.createElement('div');
     card.className = 'card';
     const titleHtml = d.source_url
-      ? `<a class="card-title-link" href="${d.source_url}" target="_blank" rel="noopener">${d.street || 'Zielona Góra'}</a>`
-      : `<p class="card-title">${d.street || 'Zielona Góra'}</p>`;
-    const desc = d.description || '';
-    const isLong = desc.length > 140;
+      ? `<a class="card-title-link" href="${escapeAttr(d.source_url)}" target="_blank" rel="noopener">${escapeHtml(d.street || 'Zielona Góra')}</a>`
+      : `<p class="card-title">${escapeHtml(d.street || 'Zielona Góra')}</p>`;
+    const rawDesc = d.description || '';
+    const isLong = rawDesc.length > 140;
+    const desc = escapeHtml(rawDesc);
     card.innerHTML = `
       <div class="card-icon" style="background:${style.bg};">
         <i class="ti ${style.icon}" style="color:${style.text};" aria-hidden="true"></i>
