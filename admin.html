@@ -24,7 +24,10 @@
   button{cursor:pointer;border:none;border-radius:8px;font-weight:600;font-size:14px;padding:11px 16px;}
   .btn-primary{background:var(--accent);color:#fff;width:100%;margin-top:16px;}
   .btn-primary:active{opacity:0.85;}
+  .btn-cancel-edit{background:transparent;color:var(--muted);width:100%;margin-top:8px;text-decoration:underline;}
   .btn-danger{background:var(--danger-bg);color:var(--danger);font-size:12.5px;padding:7px 12px;}
+  .btn-edit{background:var(--bg);color:var(--text);border:1px solid var(--border);font-size:12.5px;padding:7px 12px;}
+  .ad-actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0;}
   .status{font-size:13px;margin-top:10px;min-height:18px;}
   .status.ok{color:var(--accent);}
   .status.err{color:var(--danger);}
@@ -66,6 +69,7 @@
       <label for="fLink">Adres strony firmy (link)</label>
       <input id="fLink" placeholder="https://przyklad-firma.pl">
       <button class="btn-primary" id="addBtn">Dodaj reklamę</button>
+      <button class="btn-cancel-edit hidden" id="cancelEditBtn">Anuluj edycję</button>
       <p class="status" id="addStatus"></p>
     </div>
 
@@ -110,7 +114,11 @@ async function loadAds(){
   }
 }
 
+let currentAdsList = [];
+let editingId = null;
+
 function renderAds(items){
+  currentAdsList = items;
   const list = document.getElementById('adsList');
   if(items.length === 0){
     list.innerHTML = '<p class="empty">Brak dodanych reklam.</p>';
@@ -129,9 +137,27 @@ function renderAds(items){
         <span>${escapeHtml(ad.tagline)}</span>
         <a href="${escapeHtml(ad.link_url)}" target="_blank" rel="noopener">${escapeHtml(ad.link_url)}</a>
       </div>
-      ${ad.active ? `<button class="btn-danger" data-id="${ad.id}">Wyłącz</button>` : ''}
+      <div class="ad-actions">
+        <button class="btn-edit" data-id="${ad.id}">Edytuj</button>
+        ${ad.active ? `<button class="btn-danger" data-id="${ad.id}">Wyłącz</button>` : ''}
+      </div>
     `;
     list.appendChild(row);
+  });
+
+  list.querySelectorAll('.btn-edit').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const ad = currentAdsList.find(a => a.id === Number(btn.dataset.id));
+      if(!ad) return;
+      editingId = ad.id;
+      document.getElementById('fName').value = ad.business_name;
+      document.getElementById('fTagline').value = ad.tagline;
+      document.getElementById('fLink').value = ad.link_url;
+      document.getElementById('addBtn').textContent = 'Zapisz zmiany';
+      document.getElementById('cancelEditBtn').classList.remove('hidden');
+      document.getElementById('addStatus').textContent = '';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
   });
 
   list.querySelectorAll('.btn-danger').forEach(btn => {
@@ -174,6 +200,20 @@ keyInput.addEventListener('keydown', (e) => {
   if(e.key === 'Enter') document.getElementById('keySubmit').click();
 });
 
+function resetForm(){
+  editingId = null;
+  document.getElementById('fName').value = '';
+  document.getElementById('fTagline').value = '';
+  document.getElementById('fLink').value = '';
+  document.getElementById('addBtn').textContent = 'Dodaj reklamę';
+  document.getElementById('cancelEditBtn').classList.add('hidden');
+}
+
+document.getElementById('cancelEditBtn').addEventListener('click', () => {
+  resetForm();
+  document.getElementById('addStatus').textContent = '';
+});
+
 document.getElementById('addBtn').addEventListener('click', async () => {
   const business_name = document.getElementById('fName').value.trim();
   const tagline = document.getElementById('fTagline').value.trim();
@@ -182,7 +222,7 @@ document.getElementById('addBtn').addEventListener('click', async () => {
 
   if(!business_name || !tagline || !link_url){
     addStatus.className = 'status err';
-    addStatus.textContent = 'Wypełnij wszystkie pola.';
+    addStatus.textContent = 'Wypełnij wymagane pola.';
     return;
   }
   if(!/^https?:\/\//i.test(link_url)){
@@ -191,20 +231,22 @@ document.getElementById('addBtn').addEventListener('click', async () => {
     return;
   }
 
+  const isEditing = editingId !== null;
   addStatus.className = 'status';
-  addStatus.textContent = 'Dodaję…';
+  addStatus.textContent = isEditing ? 'Zapisuję zmiany…' : 'Dodaję…';
   try{
-    const res = await fetch(`${API_BASE_URL}/api/admin/ads`, {
+    const url = isEditing
+      ? `${API_BASE_URL}/api/admin/ads/${editingId}`
+      : `${API_BASE_URL}/api/admin/ads`;
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey },
       body: JSON.stringify({ business_name, tagline, link_url })
     });
     if(!res.ok) throw new Error('blad zapisu');
     addStatus.className = 'status ok';
-    addStatus.textContent = 'Dodano reklamę!';
-    document.getElementById('fName').value = '';
-    document.getElementById('fTagline').value = '';
-    document.getElementById('fLink').value = '';
+    addStatus.textContent = isEditing ? 'Zapisano zmiany!' : 'Dodano reklamę!';
+    resetForm();
     loadAds();
   }catch(e){
     addStatus.className = 'status err';

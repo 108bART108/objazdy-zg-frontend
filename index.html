@@ -229,8 +229,8 @@ function renderAdSlot(){
     adRotationIndex++;
     ad.className = 'ad ad-local';
     ad.innerHTML = `
-      <p class="ad-label">Reklama</p>
       <a class="ad-local-link" href="${escapeAttr(chosen.link_url)}" target="_blank" rel="noopener sponsored">
+        <p class="ad-label">Reklama</p>
         <p class="ad-local-name">${escapeHtml(chosen.business_name)}</p>
         <p class="ad-body">${escapeHtml(chosen.tagline)}</p>
       </a>`;
