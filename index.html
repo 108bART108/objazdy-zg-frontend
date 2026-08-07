@@ -601,9 +601,15 @@ notifySave.addEventListener('click', async () => {
   }
 });
 
-loadAdSenseScriptOnce();
-fetchAds();
-loadData();
+// Wazna kolejnosc: czekamy az reklamy sie pobiora (await fetchAds()),
+// ZANIM pierwszy raz wyrenderujemy liste - inaczej przy pierwszym
+// zaladowaniu strony lista reklam bylaby jeszcze pusta i appka
+// pokazalaby placeholder zamiast prawdziwej reklamy lokalnej firmy.
+(async () => {
+  loadAdSenseScriptOnce();
+  await fetchAds();
+  loadData();
+})();
 </script>
 </body>
 </html>
