@@ -86,6 +86,10 @@
   .ad{background:var(--surface-2);border:1px dashed var(--border-strong);border-radius:12px;padding:14px 16px;margin-top:12px;text-align:center;}
   .ad-label{margin:0;font-size:11px;color:var(--text-muted);}
   .ad-body{margin:4px 0 0;font-size:13px;color:var(--text-secondary);}
+  .ad-local{border-style:solid;text-align:left;}
+  .ad-local-link{display:block;text-decoration:none;color:inherit;}
+  .ad-local-link:active{opacity:0.75;}
+  .ad-local-name{margin:4px 0 0;font-size:14px;font-weight:700;color:var(--text-primary);}
   .empty{text-align:center;font-size:13px;color:var(--text-muted);padding:32px 0;}
   .skeleton{height:64px;border-radius:12px;background:linear-gradient(90deg,var(--surface-0) 25%,var(--border) 50%,var(--surface-0) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;margin-top:12px;}
   @keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
@@ -176,6 +180,83 @@ const CATEGORY_DESC = {
 const FALLBACK_DATA = [
   {id:'fallback-1',category:'drogi',street:'Sprawdź stronę Urzędu Miasta',published_at:new Date().toISOString(),description:'Nie udało się pobrać najnowszych danych. Połącz się z internetem i odśwież.'},
 ];
+
+// --- Reklamy ---
+// Do UZUPELNIENIA po zatwierdzeniu konta Google AdSense: wklej wlasciwy
+// identyfikator wydawcy (np. "ca-pub-1234567890123456"). Dopoki to pole
+// jest puste, appka NIGDY nie probuje wczytac skryptu AdSense (unikamy
+// bledow w konsoli / pustych ramek reklamowych) i zamiast tego pokazuje
+// zwykly placeholder w miejscach, gdzie nie ma jeszcze wykupionej reklamy
+// lokalnej firmy.
+const ADSENSE_CLIENT_ID = '';
+const ADSENSE_SLOT_ID = '';
+
+let localAds = [];
+let adRotationIndex = 0;
+
+async function fetchAds(){
+  try{
+    const res = await fetchWithTimeout(`${API_BASE_URL}/api/ads`);
+    if(!res.ok) throw new Error('bad response');
+    const json = await res.json();
+    localAds = json.items || [];
+  }catch(err){
+    console.warn('Nie udalo sie pobrac reklam lokalnych firm.', err);
+    localAds = [];
+  }
+}
+
+function loadAdSenseScriptOnce(){
+  if(!ADSENSE_CLIENT_ID) return;
+  if(document.getElementById('adsbygoogle-script')) return;
+  const script = document.createElement('script');
+  script.id = 'adsbygoogle-script';
+  script.async = true;
+  script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(ADSENSE_CLIENT_ID)}`;
+  script.crossOrigin = 'anonymous';
+  document.head.appendChild(script);
+}
+
+// Buduje jedna karte reklamowa: realna reklama lokalnej firmy (rotacyjnie,
+// jesli jest wiecej niz jedna), albo - jesli zaden lokalny klient nie jest
+// akurat wykupiony na ten "slot" - reklama Google AdSense (o ile skonfigurowana),
+// albo zwykly placeholder jako ostatecznosc.
+function renderAdSlot(){
+  const ad = document.createElement('div');
+
+  if(localAds.length > 0){
+    const chosen = localAds[adRotationIndex % localAds.length];
+    adRotationIndex++;
+    ad.className = 'ad ad-local';
+    ad.innerHTML = `
+      <p class="ad-label">Reklama</p>
+      <a class="ad-local-link" href="${escapeAttr(chosen.link_url)}" target="_blank" rel="noopener sponsored">
+        <p class="ad-local-name">${escapeHtml(chosen.business_name)}</p>
+        <p class="ad-body">${escapeHtml(chosen.tagline)}</p>
+      </a>`;
+    return ad;
+  }
+
+  if(ADSENSE_CLIENT_ID){
+    ad.className = 'ad ad-sense';
+    ad.innerHTML = `
+      <p class="ad-label">Reklama</p>
+      <ins class="adsbygoogle"
+           style="display:block"
+           data-ad-client="${escapeAttr(ADSENSE_CLIENT_ID)}"
+           data-ad-slot="${escapeAttr(ADSENSE_SLOT_ID)}"
+           data-ad-format="auto"
+           data-full-width-responsive="true"></ins>`;
+    try{
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+    }catch(e){ console.warn('AdSense blad:', e); }
+    return ad;
+  }
+
+  ad.className = 'ad';
+  ad.innerHTML = `<p class="ad-label">Reklama</p><p class="ad-body">Miejsce na reklamę lokalnej firmy</p>`;
+  return ad;
+}
 
 // Sprawdzone ciekawostki o Zielonej Gorze i okolicach (historia, tradycja
 // winiarska, przyroda, ludzie). Jedna dziennie, wybierana rotacyjnie wg dnia
@@ -329,6 +410,7 @@ function escapeAttr(text){
 function render(){
   const items = currentItems;
   list.innerHTML = '';
+  adRotationIndex = 0;
   categoryDesc.textContent = CATEGORY_DESC[filter] || CATEGORY_DESC.all;
 
   if(items.length === 0){
@@ -372,10 +454,7 @@ function render(){
     }
 
     if((i + 1) % 2 === 0 && i !== items.length - 1){
-      const ad = document.createElement('div');
-      ad.className = 'ad';
-      ad.innerHTML = `<p class="ad-label">Reklama</p><p class="ad-body">Miejsce na reklamę lokalnej firmy</p>`;
-      list.appendChild(ad);
+      list.appendChild(renderAdSlot());
     }
   });
 }
@@ -522,6 +601,8 @@ notifySave.addEventListener('click', async () => {
   }
 });
 
+loadAdSenseScriptOnce();
+fetchAds();
 loadData();
 </script>
 </body>
